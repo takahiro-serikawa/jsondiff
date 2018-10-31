@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+
+<!-- jsondiff.html - compare 2 .json files. -->
+<!-- Copyright 2018 SERIKAWA -->
+
+<!-- JSON ファイルを比較して、差異を強調表示
+いまのところ比較の都合で整形してから表示します。
+そのうちもとのインデントのまま表示機能対応予定 -->
+
+<head>
+<meta charset="utf-8"/>
+<title>JSON diff</title>
+<style>
+html {
+	height: 100%;
+}
+
+body {
+	background: whitesmoke;
+	margin: 0;
+	/*padding: 0;*/
+	min-height: 100%;
+	height: 100%;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+main {
+	display: flex;
+	overflow-x: hidden;
+	overflow-y: scroll;
+	/*height: 95vh;*/
+}
+
+header {
+	/*color: white;*/
+	background: mistyrose;
+}
+main>div {
+	flex-basis: 50%;
+	padding: 2px;
+}
+
+pre {
+	margin: 0;
+	background: white;
+	/* 等幅フォント; http://wada811.blogspot.com/2012/12/monospace-font-family.html */
+	font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
+	padding: 4px;
+	/*border: solid 1px gainsboro;*/
+}
+
+.ok-text { color: lime; }
+.ng-text { color: red; }
+.error-text { color: fuchsia; }	/* エラー表示 */
+.diff-text { background: yellow; }	/* 差異強調表示 */
+</style>
+</head>
+
+<body>
+<header>
+	JSON diff version 0.00 -
+	<span id="result" class="ok-text">compare 2 .json files</span>
+	<!--button>next</button-->
+</header>
+<main>
+	<!-- ch0: left side -->
+	<div id="divL">
+		<input type="file" id="fileL" data-ch="0"><br>
+		<span id="nameL">filename</span>
+		<pre id="preL">drop .json file here.</pre>
+	</div>
+
+	<!-- ch1: right side -->
+	<div id="divR">
+		<input type="file" id="fileR" data-ch="1"><br>
+		<span id="nameR">filename</span>
+		<pre id="preR">drop .json file here.</pre>
+	</div>
+</main>
+<!--footer>
+	<span id="result"></span>
+</footer-->
+	
+<script>
+'use strict';
+var diff = [
+	{ source: '', text: '', obj: undefined },	// L)eft side view data
+	{ source: '', text: '', obj: undefined }];	// R)ight side view data
+
+for (var ch = 0; ch < 2; ch++) {
+	['file', 'name', 'pre'].forEach(function (elem) {
+		diff[ch][elem] = document.getElementById(elem+'LR'[ch]);
+	});
+
+	diff[ch].file.onchange = function (ev) {
+		loadJson(this.dataset.ch, ev.target.files[0]);
+	}
+}
+
+document.ondragover = function(ev) {
+	ev.preventDefault();
+	ev.dataTransfer.dropEffect = 'copy'
+}
+
+document.ondrop = function(ev) {
+	ev.preventDefault();
+	loadJson(0, ev.dataTransfer.files[0]);
+	if (ev.dataTransfer.files.length>1)
+		loadJson(1, ev.dataTransfer.files[1]);
+}
+
+document.getElementById('divR').ondrop = function(ev) {
+	ev.preventDefault();
+	loadJson(1, ev.dataTransfer.files[0]);
+}
+
+function loadJson(ch, file) {
+	diff[ch].name.innerHTML = file.name;
+
+	var reader = new FileReader();
+	reader.onload = function () {
+		diff[ch].source = reader.result;
+		try {
+			diff[ch].obj = JSON.parse(diff[ch].source);
+			diff[ch].text = JSON.stringify(diff[ch].obj, null, 2);
+			//diff[ch].pre.innerHTML = diff[ch].text
+			diff[ch].pre.classList.remove('error-text');
+
+			diffJson()
+		} catch (ex) {
+			diff[ch].pre.innerHTML = ex;
+			diff[ch].pre.classList.add('error-text');
+		}
+	}
+	reader.readAsText(file);
+}
+
+function diffJson() {
+	if (diff[0].obj == undefined || diff[1].obj == undefined ) return;
+
+	var tc0 = Date.now();
+
+	for (var ch=0; ch<2; ch++) {
+		diff[ch].list = [];
+		splitMembers(diff[ch].list, '', null, diff[ch].obj);
+		scanText(diff[ch].list, diff[ch].text);
+	}
+
+	var mm = mergeThem(diff[0].list, diff[1].list);
+
+	var dd0 = [], dd1 = [];
+	extractDiffs(dd0, dd1, mm);
+
+	// show diff results
+	diff[0].pre.innerHTML = makeHtml(dd0, diff[0].text);
+	diff[1].pre.innerHTML = makeHtml(dd1, diff[1].text);
+	console.log(diff[0].list.length+' lines and '+diff[1].list.length+' lines; '+(Date.now()-tc0)+'msec');
+}
+
+/* split all members of obj
+ out(append) list: [ {
+  path: path to member
+  name: json member name
+  obj: json member value
+ } ]
+ */
+function splitMembers(list, path, name, obj) {
+	var type = typeString(obj);
+	list.push({ path: path, name: name, type: type, obj: obj, index: list.length });
+	if (type == 'array')
+		for (var i = 0; i < obj.length; i++)
+			splitMembers(list, path+'['+i+']', i, obj[i])
+	else if (type == 'object')
+		//for (var key of Object.keys(obj))
+		//	splitMembers(list, path+'.'+key, key, obj[key])
+		Object.keys(obj).forEach(function (key) {
+			splitMembers(list, path+'.'+key, key, obj[key])
+		});
+	}
+
+function typeString(obj) {
+	if (obj instanceof Array)
+		return 'array';
+	if (obj == null)
+		return 'null';
+	return typeof obj
+}
+
+// update list[].position of member in text
+function scanText(list, text) {
+	var pos = 0;
+	for (var i = 0; i < list.length; i++) {
+		var s = JSON.stringify(list[i].name);
+		if (list[i].type == 'array') {
+			if (typeof list[i].name != 'string') 
+				continue;
+			pos = text.indexOf(s, pos);
+			if (pos < 0)
+				throw 'array not found '+s;
+			list[i].pos = pos;
+			pos += s.length;
+		} else if (list[i].type == 'object') {
+			if (typeof list[i].name != 'string') 
+				continue;
+			pos = text.indexOf(s, pos);
+			if (pos < 0)
+				throw 'object not found '+s;
+			list[i].pos = pos;
+			pos += s.length;
+		} else {
+			if (typeof list[i].name === 'string')
+				s += ': ' + JSON.stringify(list[i].obj)	// TODO フォーマット済みでないと機能しない
+			else
+				s = JSON.stringify(list[i].obj);	// array member has no key
+			pos = text.indexOf(s, pos);
+			if (pos < 0)
+				throw 'value not found '+list[i].name+': '+list[i].obj;
+			list[i].pos = pos;
+			pos += s.length;
+		}
+	}
+}
+
+function mergeThem(list0, list1) {
+	var mm = {};
+	for (var i = 0; i < list0.length; i++) {
+		var l = list0[i];
+		mm[l.path] = {};
+		mm[l.path].left = l
+	}
+	for (var j = 0; j < list1.length; j++) {
+		var r = list1[j];
+		if (mm[r.path] == undefined)
+			mm[r.path] = {};
+		mm[r.path].right = r
+	}
+	return mm
+}
+
+/*
+ out dd0: [] extracted differences left
+ out dd1: []                       right
+ mm: 
+ */
+function extractDiffs(dd0, dd1, mm) {
+	var diff_count = 0;
+	//var keys = Object.keys(mm);
+	//for (var key of keys) {
+	Object.keys(mm).forEach(function (key) {
+		var lstr, rstr;
+		if (mm[key].left == undefined)
+			lstr = '(missing)'
+		else if (mm[key].left.type == 'array')
+			lstr = '(array)'
+		else if (mm[key].left.type == 'object')
+			lstr = '(object)'
+		else
+			lstr = JSON.stringify(mm[key].left.obj);
+
+		if (mm[key].right == undefined)
+			rstr = '(missing)'
+		else if (mm[key].right.type == 'array')
+			rstr = '(array)'
+		else if (mm[key].right.type == 'object')
+			rstr = '(object)'
+		else
+			rstr = JSON.stringify(mm[key].right.obj);
+
+		if (lstr != rstr) {
+			if (mm[key].left) dd0.push(mm[key].left);
+			if (mm[key].right) dd1.push(mm[key].right);
+			diff_count++;
+			console.log(key+': '+lstr+' != '+rstr)
+		}
+	});
+	dd0.sort(function (d0, d1) { return d0.pos - d1.pos });
+	dd1.sort(function (d0, d1) { return d0.pos - d1.pos });
+
+	var result = document.getElementById('result');
+	if (diff_count == 0) {
+		result.innerHTML = 'they are SAME'
+		result.classList.remove('ng-text');
+	} else {
+		result.innerHTML = diff_count+' differnce(s) found';
+		result.classList.add('ng-text');
+	}
+	return diff_count
+}
+
+/* returns hilighted HTML.
+ dd: [ { pos: char index } ]; array of differences
+ text; formated(stringify) JSON
+ */
+function makeHtml(dd, text) {
+	var html = '', k = 0;
+	for (var i = 0; i < dd.length; i++) {
+		if (dd[i].pos == undefined) continue;
+		html += text.substring(k, dd[i].pos);
+		var j = text.indexOf('\n', dd[i].pos);
+		var diff = text.substring(dd[i].pos, (j>=0) ? j:undefined);
+		html += '<span class="diff-text">' + diff + '</span>';
+		k = (j > 0) ? j : text.length();
+	}
+	html += text.substring(k);
+	return html
+}
+</script>
+</body>
+</html>

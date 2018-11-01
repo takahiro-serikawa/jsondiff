@@ -61,7 +61,7 @@ pre {
 
 <body>
 <header>
-	JSON diff version 0.01 -
+	JSON diff version 0.02 -
 	<span id="result" class="ok-text">compare 2 .json files</span>
 	<!--button>next</button-->
 </header>
@@ -142,7 +142,7 @@ function loadJson(ch, file) {
 }
 
 function diffJson() {
-	if (diff[0].obj == undefined || diff[1].obj == undefined ) return;
+	if (diff[0].obj == undefined || diff[1].obj == undefined) return;
 
 	var tc0 = Date.now();
 
@@ -280,8 +280,10 @@ function extractDiffs(dd0, dd1, mm) {
 			console.log(key+': '+lstr+' != '+rstr)
 		}
 	});
-	dd0.sort(function (d0, d1) { return d0.pos - d1.pos });
-	dd1.sort(function (d0, d1) { return d0.pos - d1.pos });
+
+	function compare(a, b) { return a.index - b.index }
+	dd0.sort(compare);
+	dd1.sort(compare);
 
 	var result = document.getElementById('result');
 	if (diff_count == 0) {

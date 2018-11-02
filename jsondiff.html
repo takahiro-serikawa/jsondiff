@@ -38,6 +38,7 @@ header {
 	/*color: white;*/
 	background: mistyrose;
 }
+
 main>div {
 	flex-basis: 50%;
 	padding: 2px;
@@ -69,14 +70,18 @@ pre {
 	<!-- ch0: left side -->
 	<div id="divL">
 		<input type="file" id="fileL" data-ch="0"><br>
-		<span id="nameL">filename</span>
+		<span id="nameL">filename</span><br>
+		<button id="getL" data-ch="0">http get</button>
+		<input type="text" id="urlL" placeholder="url">
 		<pre id="preL">drop .json file here.</pre>
 	</div>
 
 	<!-- ch1: right side -->
 	<div id="divR">
 		<input type="file" id="fileR" data-ch="1"><br>
-		<span id="nameR">filename</span>
+		<span id="nameR">filename</span><br>
+		<button id="getR" data-ch="1">http get</button>
+		<input type="text" id="urlR" placeholder="url">
 		<pre id="preR">drop .json file here.</pre>
 	</div>
 </main>
@@ -91,12 +96,16 @@ var diff = [
 	{ source: '', text: '', obj: undefined }];	// R)ight side view data
 
 for (var ch = 0; ch < 2; ch++) {
-	['file', 'name', 'pre'].forEach(function (elem) {
+	['file', 'name', 'pre', 'get', 'url'].forEach(function (elem) {
 		diff[ch][elem] = document.getElementById(elem+'LR'[ch]);
 	});
 
 	diff[ch].file.onchange = function (ev) {
 		loadJson(this.dataset.ch, ev.target.files[0]);
+	}
+	diff[ch].get.onclick = function (ev) {
+		var ch = this.dataset.ch;
+		getJson(ch, diff[ch].url.value)
 	}
 }
 
@@ -120,30 +129,48 @@ document.getElementById('divR').ondrop = function(ev) {
 		loadJson(0, ev.dataTransfer.files[1]);
 }
 
+function getJson(ch, url) {
+	if (url.indexOf('://') < 0)
+		url = 'http://' + url;
+
+	var req = new XMLHttpRequest();
+	req.open('GET', url, true);
+	req.onload = function () {
+		parseJson(ch, req.response)
+	}
+	req.onerror = function () {
+		diff[ch].pre.innerHTML = 'http error'
+	}
+	req.send()
+}
+
 function loadJson(ch, file) {
 	diff[ch].name.innerHTML = file.name;
 
 	var reader = new FileReader();
 	reader.onload = function () {
-		diff[ch].source = reader.result;
-		try {
-			diff[ch].obj = JSON.parse(diff[ch].source);
-			diff[ch].text = JSON.stringify(diff[ch].obj, null, 2);
-			//diff[ch].pre.innerHTML = diff[ch].text
-			diff[ch].pre.classList.remove('error-text');
-
-			diffJson()
-		} catch (ex) {
-			diff[ch].pre.innerHTML = ex;
-			diff[ch].pre.classList.add('error-text');
-		}
+		parseJson()
 	}
 	reader.readAsText(file);
 }
 
-function diffJson() {
-	if (diff[0].obj == undefined || diff[1].obj == undefined) return;
+function parseJson(ch, text) {
+	diff[ch].source = text;
+	try {
+		diff[ch].obj = JSON.parse(diff[ch].source);
+		diff[ch].text = JSON.stringify(diff[ch].obj, null, 2);
+		diff[ch].pre.innerHTML = diff[ch].text
+		//diff[ch].pre.classList.remove('error-text');
 
+		if (diff[0].obj != undefined && diff[1].obj != undefined)
+			diffJson()
+	} catch (ex) {
+		diff[ch].pre.innerHTML = '<span class="error-text">'+ex+'</span><br><code>'+text+'</code>';
+		//diff[ch].pre.classList.add('error-text');
+	}
+}
+
+function diffJson() {
 	var tc0 = Date.now();
 
 	for (var ch=0; ch<2; ch++) {
@@ -177,10 +204,7 @@ function splitMembers(list, path, name, obj) {
 		for (var i = 0; i < obj.length; i++)
 			splitMembers(list, path+'['+i+']', i, obj[i])
 	else if (type == 'object')
-		//for (var key of Object.keys(obj))
-		//	splitMembers(list, path+'.'+key, key, obj[key])
 		Object.keys(obj).forEach(function (key) {
-			//splitMembers(list, path+'.'+key, key, obj[key])
 			splitMembers(list, path+'\n'+JSON.stringify(key), key, obj[key])
 		});
 	}
@@ -251,8 +275,6 @@ function mergeThem(list0, list1) {
  */
 function extractDiffs(dd0, dd1, mm) {
 	var diff_count = 0;
-	//var keys = Object.keys(mm);
-	//for (var key of keys) {
 	Object.keys(mm).forEach(function (key) {
 		var lstr, rstr;
 		if (mm[key].left == undefined)
@@ -306,8 +328,8 @@ function makeHtml(dd, text) {
 		if (dd[i].pos == undefined) continue;
 		html += text.substring(k, dd[i].pos);
 		var j = text.indexOf('\n', dd[i].pos);
-		var diff = text.substring(dd[i].pos, (j>=0) ? j:undefined);
-		html += '<span class="diff-text">' + diff + '</span>';
+		var d = text.substring(dd[i].pos, (j>=0) ? j:undefined);
+		html += '<span class="diff-text">' + d + '</span>';
 		k = (j > 0) ? j : text.length();
 	}
 	html += text.substring(k);

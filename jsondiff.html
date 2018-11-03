@@ -35,13 +35,19 @@ main {
 }
 
 header {
-	/*color: white;*/
-	background: mistyrose;
+	padding: 4px 7px;
+	color: white;
+	background: darkslategray;
 }
 
 main>div {
 	flex-basis: 50%;
-	padding: 2px;
+	padding: 1px;
+}
+
+#nameL,#nameR {
+	width: 80%;
+	box-sizing: border-box;
 }
 
 pre {
@@ -149,7 +155,7 @@ function loadJson(ch, file) {
 
 	var reader = new FileReader();
 	reader.onload = function () {
-		parseJson()
+		parseJson(ch, reader.result)
 	}
 	reader.readAsText(file);
 }

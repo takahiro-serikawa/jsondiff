@@ -7,7 +7,7 @@ javascriptのお勉強のため書きましたが、そこそこ実用的なウ�
 ## ■LICENSE
 Copyright 2018 Takahiro Serikawa
 Released under the MIT license
-https://github.com/YukinobuKurata/YouTubeMagicBuyButton/blob/master/MIT-LICENSE.txt
+http://opensource.org/licenses/mit-license.php
 
 ## ■インストール
 インストーラはありません。

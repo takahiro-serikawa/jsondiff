@@ -24,19 +24,16 @@ file:///C:/Users/ゆーざー/Downloads/jsondiff.html
 アンインストールするときはjsondiff.htmlを削除してください。
 
 ■使い方
-1. ファイル選択
-
+1. ファイル選択  
 [ファイル選択]ボタンをおして.jsonファイルを選択します。
-2. ドラッグ・アンド・ドロップ
-
+2. ドラッグ・アンド・ドロップ  
 エクスプローラから.jsonファイルをドラッグ・アンド・ドロップします。
-3. http get
-
+3. http get  
 jsonを取得するウェブAPIのURLをキーボードで入力し、[http get]ボタンを押します。
 
 ■動作確認
-Google Chrome version 70.0.3538.77 (Windows10)
-Firefox Version 63.0.1 (Windows10)
+- Google Chrome version 70.0.3538.77 (Windows10)
+- Firefox Version 63.0.1 (Windows10)
 
 ■制限
 比較処理の都合で整形(改行＆インデント)してから表示します。

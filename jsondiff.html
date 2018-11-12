@@ -331,14 +331,15 @@ function extractDiffs(dd0, dd1, mm) {
  */
 function makeHtml(dd, text) {
 	var html = '', k = 0;
-	for (var i = 0; i < dd.length; i++) {
-		if (dd[i].pos == undefined) continue;
-		html += text.substring(k, dd[i].pos);
-		var j = text.indexOf('\n', dd[i].pos);
-		var d = text.substring(dd[i].pos, (j>=0) ? j:undefined);
-		html += '<span class="diff-text">' + d + '</span>';
+	dd.forEach(function (d) {
+		if (d.pos == undefined) return;
+		html += text.substring(k, d.pos);
+		var j = text.indexOf('\n', d.pos);
+		if (j > 0 && text[j-1] == ',') j--;	// exclude ','
+		var t = text.substring(d.pos, (j>=0) ? j:undefined);
+		html += '<span class="diff-text">' + t + '</span>';
 		k = (j > 0) ? j : text.length();
-	}
+	});
 	html += text.substring(k);
 	return html
 }

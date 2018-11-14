@@ -330,20 +330,23 @@ function extractDiffs(dd0, dd1, mm) {
  text; formated(stringify) JSON
  */
 function makeHtml(dd, text) {
-	var html = '', k = 0;
+	var html = '', i = 0;
 	dd.forEach(function (d) {
 		if (d.pos == undefined) return;
-		html += text.substring(k, d.pos);
+		html += text.substring(i, d.pos);
 		var j = text.indexOf('\n', d.pos);
-		if (j < 0)
-			j = undefined
-		else if (text[j-1] == ',')
-			j--;	// exclude ','
+		if (j < 0) {
+			i = text.length;
+			j = undefined;
+		} else {
+			i = j;
+			if (text[j-1] == ',')
+				i = --j;	// exclude ',' 
+		}
 		var t = text.substring(d.pos, j);
 		html += '<span class="diff-text">' + t + '</span>';
-		k = (j > 0) ? j : text.length();
 	});
-	html += text.substring(k);
+	html += text.substring(i);
 	return html
 }
 </script>

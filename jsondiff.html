@@ -98,11 +98,11 @@ pre {
 	
 <script>
 'use strict';
-var diff = [
+const diff = [
 	{ source: '', text: '', obj: undefined },	// L)eft side view data
 	{ source: '', text: '', obj: undefined }];	// R)ight side view data
 
-for (var ch = 0; ch < 2; ch++) {
+for (let ch = 0; ch < 2; ch++) {
 	['file', 'name', 'pre', 'get', 'url'].forEach(function (elem) {
 		diff[ch][elem] = document.getElementById(elem+'LR'[ch]);
 	});
@@ -111,7 +111,7 @@ for (var ch = 0; ch < 2; ch++) {
 		loadJson(this.dataset.ch, ev.target.files[0]);
 	}
 	diff[ch].get.onclick = function (ev) {
-		var ch = this.dataset.ch;
+		const ch = this.dataset.ch;
 		getJson(ch, diff[ch].url.value)
 	}
 }
@@ -140,7 +140,7 @@ function getJson(ch, url) {
 	if (url.indexOf('://') < 0)
 		url = 'http://' + url;
 
-	var req = new XMLHttpRequest();
+	const req = new XMLHttpRequest();
 	req.open('GET', url, true);
 	req.onload = function () {
 		parseJson(ch, req.response)
@@ -154,7 +154,7 @@ function getJson(ch, url) {
 function loadJson(ch, file) {
 	diff[ch].name.innerHTML = file.name;
 
-	var reader = new FileReader();
+	const reader = new FileReader();
 	reader.onload = function () {
 		parseJson(ch, reader.result)
 	}
@@ -178,17 +178,17 @@ function parseJson(ch, text) {
 }
 
 function diffJson() {
-	var tc0 = Date.now();
+	const tc0 = Date.now();
 
-	for (var ch=0; ch<2; ch++) {
+	for (let ch=0; ch<2; ch++) {
 		diff[ch].list = [];
 		splitMembers(diff[ch].list, '', null, diff[ch].obj);
 		scanText(diff[ch].list, diff[ch].text);
 	}
 
-	var mm = mergeThem(diff[0].list, diff[1].list);
+	const mm = mergeThem(diff[0].list, diff[1].list);
 
-	var dd0 = [], dd1 = [];
+	const dd0 = [], dd1 = [];
 	extractDiffs(dd0, dd1, mm);
 
 	// show diff results
@@ -205,12 +205,12 @@ function diffJson() {
  } ]
  */
 function splitMembers(list, path, name, obj) {
-	var type = typeString(obj);
+	const type = typeString(obj);
 	list.push({ path: path, name: name, type: type, obj: obj, index: list.length });
-	if (type == 'array')
-		for (var i = 0; i < obj.length; i++)
+	if (type === 'array')
+		for (let i = 0; i < obj.length; i++)
 			splitMembers(list, path+'['+i+']', i, obj[i])
-	else if (type == 'object')
+	else if (type === 'object')
 		Object.keys(obj).forEach(function (key) {
 			splitMembers(list, path+'\n'+JSON.stringify(key), key, obj[key])
 		});
@@ -226,9 +226,9 @@ function typeString(obj) {
 
 // update list[].position of member in text
 function scanText(list, text) {
-	var pos = 0;
-	for (var i = 0; i < list.length; i++) {
-		var s = JSON.stringify(list[i].name);
+	let pos = 0;
+	for (let i = 0; i < list.length; i++) {
+		let s = JSON.stringify(list[i].name);
 		if (list[i].type == 'array') {
 			if (typeof list[i].name != 'string') 
 				continue;
@@ -260,14 +260,14 @@ function scanText(list, text) {
 }
 
 function mergeThem(list0, list1) {
-	var mm = {};
-	for (var i = 0; i < list0.length; i++) {
-		var l = list0[i];
+	const mm = {};
+	for (let i = 0; i < list0.length; i++) {
+		const l = list0[i];
 		mm[l.path] = {};
 		mm[l.path].left = l
 	}
-	for (var j = 0; j < list1.length; j++) {
-		var r = list1[j];
+	for (let j = 0; j < list1.length; j++) {
+		const r = list1[j];
 		if (mm[r.path] == undefined)
 			mm[r.path] = {};
 		mm[r.path].right = r
@@ -281,9 +281,9 @@ function mergeThem(list0, list1) {
  mm: 
  */
 function extractDiffs(dd0, dd1, mm) {
-	var diff_count = 0;
+	let diff_count = 0;
 	Object.keys(mm).forEach(function (key) {
-		var lstr, rstr;
+		let lstr, rstr;
 		if (mm[key].left == undefined)
 			lstr = '(missing)'
 		else if (mm[key].left.type == 'array')
@@ -314,7 +314,7 @@ function extractDiffs(dd0, dd1, mm) {
 	dd0.sort(compare);
 	dd1.sort(compare);
 
-	var result = document.getElementById('result');
+	const result = document.getElementById('result');
 	if (diff_count == 0) {
 		result.innerHTML = 'they are SAME'
 		result.classList.remove('ng-text');
@@ -330,20 +330,21 @@ function extractDiffs(dd0, dd1, mm) {
  text; formated(stringify) JSON
  */
 function makeHtml(dd, text) {
-	var html = '', i = 0;
+	let html = '', i = 0;
 	dd.forEach(function (d) {
 		if (d.pos == undefined) return;
-		html += text.substring(i, d.pos);
-		var j = text.indexOf('\n', d.pos);
-		if (j < 0) {
+		const j = d.pos;
+		html += text.substring(i, j);
+		let k = text.indexOf('\n', j);
+		if (k < 0) {
 			i = text.length;
-			j = undefined;
+			k = undefined;
 		} else {
-			i = j;
-			if (text[j-1] == ',')
-				i = --j;	// exclude ',' 
+			i = k;
+			if (text[k-1] == ',')
+				i = --k;	// exclude ',' 
 		}
-		var t = text.substring(d.pos, j);
+		const t = text.substring(j, k);
 		html += '<span class="diff-text">' + t + '</span>';
 	});
 	html += text.substring(i);
